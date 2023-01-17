@@ -2,26 +2,27 @@
 
 (provide read-syntax)
 
-(: datum? (-> Any Boolean))
+(: datum? : Any -> Boolean)
 (define (datum? x) (or (list? x) (symbol? x)))
-
-(: format-datum (-> Datum Any * (U Datum Void)))
+ 
+(: string->datum : String -> Any)
+(define (string->datum s) 
+  (read (open-input-string (format "(~a)" s))))
+ 
+(: format-datum : Datum String * -> Any)
 (define (format-datum datumTemplate . vals)
-  (unless (datum? datumTemplate) (raise-argument-error 'format-datums "datum?" datumTemplate))
-  (apply format (format "~a" datumTemplate) vals))
+  (string->datum (apply format (format "~a" datumTemplate) vals)))
 
-(: format-datums (-> Datum (Listof Any) (Listof Datum)))
-(define (format-datums datumTemplate . valsLst)
-  (unless (datum? datumTemplate) (raise-argument-error 'format-datums "datum?" datumTemplate))
-  (map (lambda vals (apply format-datum datumTemplate vals)) valsLst))
+(: format-datums : Datum (Listof String) (Listof String) * -> (Listof Any))
+(define (format-datums datumTemplate v1 . valsLst)
+  (apply map (lambda [v : String *] (apply format-datum datumTemplate v)) v1 valsLst))
 
-(displayln (format-datums '(handle ~a) (list "zzz" "yyy")))
-  
-; (: read-syntax (-> Any Input-Port Syntax))
-; (define (read-syntax path port)
-;   (let* 
-;     (;[srcLines (port->lines port)]
-;      [srcDatums (format-datum '(handle ~a) "zzz")]
-;      [moduleDatum `(module stacker racket ,srcDatums)])
-;     (datum->syntax #f moduleDatum)))
+(: read-syntax : Any Input-Port -> (Syntaxof Any))
+(define (read-syntax path port)
+  (let* 
+    ([srcLines (port->lines port)]
+     [srcDatums (format-datums '(handle ~a) srcLines)]
+     [moduleDatum `(module stacker racket ,@srcDatums)])
+    (datum->syntax #f moduleDatum)))
+
 
